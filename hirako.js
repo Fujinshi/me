@@ -1,503 +1,243 @@
 javascript:(function(){
-    // Hirako - Advanced Mobile Inspector v1.0
-    var Hirako = {
-        version: '1.0.0',
-        active: false,
-        panel: null,
-        elements: {},
-        
-        // Main initialization
-        init: function() {
-            if(this.active) return this.show();
-            this.createPanel();
-            this.attachEvents();
-            this.active = true;
-            this.log('Hirako v' + this.version + ' siap digunakan!');
-        },
-        
-        // Create UI Panel
-        createPanel: function() {
-            var panel = document.createElement('div');
-            panel.id = 'hirako-panel';
-            panel.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#1e1e2e;color:#fff;z-index:999999;font-family:monospace;font-size:12px;border-top:3px solid #ff6b6b;box-shadow:0 -2px 10px rgba(0,0,0,0.3);transition:all 0.3s ease;';
-            panel.innerHTML = `
-                <div style="display:flex;background:#2a2a3a;padding:8px;border-bottom:1px solid #3a3a4a;">
-                    <div style="flex:1;display:flex;gap:10px;">
-                        <button data-tab="inspect" class="hirako-tab active" style="background:#ff6b6b;color:#fff;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;">🔍 Inspect</button>
-                        <button data-tab="console" class="hirako-tab" style="background:#3a3a4a;color:#fff;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;">📝 Console</button>
-                        <button data-tab="elements" class="hirako-tab" style="background:#3a3a4a;color:#fff;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;">📄 Elements</button>
-                        <button data-tab="network" class="hirako-tab" style="background:#3a3a4a;color:#fff;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;">🌐 Network</button>
-                        <button data-tab="storage" class="hirako-tab" style="background:#3a3a4a;color:#fff;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;">💾 Storage</button>
-                        <button data-tab="performance" class="hirako-tab" style="background:#3a3a4a;color:#fff;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;">⚡ Perf</button>
-                    </div>
-                    <div>
-                        <button id="hirako-close" style="background:#ff6b6b;color:#fff;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;">✖ Close</button>
-                    </div>
-                </div>
-                <div id="hirako-content" style="height:250px;overflow:auto;padding:10px;background:#1e1e2e;"></div>
-                <div style="background:#2a2a3a;padding:5px;font-size:10px;border-top:1px solid #3a3a4a;">
-                    <span>🎯 Mode: <span id="hirako-mode">Inspect</span></span>
-                    <span style="margin-left:15px;">⚡ Hirako v1.0</span>
-                </div>
-            `;
-            document.body.appendChild(panel);
-            this.panel = panel;
-            
-            // Tabs
-            document.querySelectorAll('.hirako-tab').forEach(tab => {
-                tab.onclick = () => this.switchTab(tab.dataset.tab);
-            });
-            document.getElementById('hirako-close').onclick = () => this.destroy();
-        },
-        
-        // Switch tabs
-        switchTab: function(tabName) {
-            document.querySelectorAll('.hirako-tab').forEach(tab => {
-                tab.style.background = '#3a3a4a';
-            });
-            document.querySelector(`[data-tab="${tabName}"]`).style.background = '#ff6b6b';
-            document.getElementById('hirako-mode').innerText = tabName.charAt(0).toUpperCase() + tabName.slice(1);
-            
-            switch(tabName) {
-                case 'inspect': this.showInspectTab(); break;
-                case 'console': this.showConsoleTab(); break;
-                case 'elements': this.showElementsTab(); break;
-                case 'network': this.showNetworkTab(); break;
-                case 'storage': this.showStorageTab(); break;
-                case 'performance': this.showPerformanceTab(); break;
-            }
-        },
-        
-        // Inspect Tab
-        showInspectTab: function() {
-            var content = document.getElementById('hirako-content');
-            content.innerHTML = `
-                <div style="margin-bottom:10px;">
-                    <button id="hirako-select" style="background:#ff6b6b;color:#fff;border:none;padding:8px;border-radius:5px;margin-right:5px;cursor:pointer;">🎯 Pilih Elemen</button>
-                    <button id="hirako-highlight" style="background:#4a6bff;color:#fff;border:none;padding:8px;border-radius:5px;margin-right:5px;cursor:pointer;">✨ Highlight Semua</button>
-                    <button id="hirako-clear" style="background:#6b6b6b;color:#fff;border:none;padding:8px;border-radius:5px;cursor:pointer;">🗑 Clear</button>
-                </div>
-                <div id="hirako-inspector-result" style="background:#2a2a3a;padding:10px;border-radius:5px;font-size:11px;word-break:break-all;">
-                    <i>Klik "Pilih Elemen" lalu tap elemen di halaman</i>
-                </div>
-                <div id="hirako-styles" style="margin-top:10px;background:#2a2a3a;padding:10px;border-radius:5px;display:none;">
-                    <b>🎨 CSS Styles</b>
-                    <div id="hirako-css-content" style="font-size:11px;margin-top:5px;"></div>
-                </div>
-            `;
-            
-            document.getElementById('hirako-select').onclick = () => this.enableElementPicker();
-            document.getElementById('hirako-highlight').onclick = () => this.highlightAllElements();
-            document.getElementById('hirako-clear').onclick = () => {
-                document.getElementById('hirako-inspector-result').innerHTML = '<i>Siap untuk inspect elemen...</i>';
-                document.getElementById('hirako-styles').style.display = 'none';
-            };
-        },
-        
-        // Element picker
-        enableElementPicker: function() {
-            var overlay = document.createElement('div');
-            overlay.id = 'hirako-overlay';
-            overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(255,107,107,0.1);z-index:1000000;cursor:crosshair;';
-            document.body.appendChild(overlay);
-            
-            var tooltip = document.createElement('div');
-            tooltip.id = 'hirako-tooltip';
-            tooltip.style.cssText = 'position:fixed;background:#ff6b6b;color:#fff;padding:5px 10px;border-radius:5px;font-size:12px;z-index:1000001;pointer-events:none;';
-            document.body.appendChild(tooltip);
-            
-            var picker = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                var el = e.target;
-                this.showElementInfo(el);
-                overlay.remove();
-                tooltip.remove();
-                document.removeEventListener('mouseover', hover);
-                document.removeEventListener('click', picker);
-            };
-            
-            var hover = (e) => {
-                var el = e.target;
-                tooltip.innerHTML = el.tagName + (el.id ? '#' + el.id : '') + (el.className ? '.' + el.className.split(' ')[0] : '');
-                tooltip.style.left = (e.clientX + 15) + 'px';
-                tooltip.style.top = (e.clientY + 15) + 'px';
-                e.target.style.outline = '2px solid #ff6b6b';
-                
-                setTimeout(() => {
-                    if(e.target.style.outline) e.target.style.outline = '';
-                }, 100);
-            };
-            
-            document.addEventListener('mouseover', hover);
-            document.addEventListener('click', picker);
-        },
-        
-        // Show element info
-        showElementInfo: function(el) {
-            var rect = el.getBoundingClientRect();
-            var styles = window.getComputedStyle(el);
-            var info = `
-                <b>📦 Element:</b> ${el.tagName}<br>
-                <b>🆔 ID:</b> ${el.id || '-'}<br>
-                <b>📝 Class:</b> ${el.className || '-'}<br>
-                <b>📐 Size:</b> ${Math.round(rect.width)}x${Math.round(rect.height)}px<br>
-                <b>📍 Position:</b> (${Math.round(rect.left)}, ${Math.round(rect.top)})<br>
-                <b>👶 Children:</b> ${el.children.length}<br>
-                <b>📄 Inner HTML:</b> <span style="color:#ffa500;">${el.innerHTML.substring(0, 100)}${el.innerHTML.length > 100 ? '...' : ''}</span><br>
-                <b>🔗 Outer HTML:</b> <span style="color:#4ecdc4;">${el.outerHTML.substring(0, 100)}${el.outerHTML.length > 100 ? '...' : ''}</span><br>
-                <button id="hirako-view-styles" style="background:#4a6bff;color:#fff;border:none;padding:5px;border-radius:3px;margin-top:5px;cursor:pointer;">🎨 Lihat CSS</button>
-                <button id="hirako-edit-html" style="background:#ffa500;color:#fff;border:none;padding:5px;border-radius:3px;margin-top:5px;margin-left:5px;cursor:pointer;">✏️ Edit HTML</button>
-            `;
-            
-            document.getElementById('hirako-inspector-result').innerHTML = info;
-            
-            document.getElementById('hirako-view-styles').onclick = () => {
-                var css = '';
-                for(var i = 0; i < styles.length; i++) {
-                    var prop = styles[i];
-                    var val = styles.getPropertyValue(prop);
-                    if(val && val !== 'normal' && val !== 'auto' && val !== 'none') {
-                        css += `${prop}: ${val};\n`;
-                    }
-                }
-                document.getElementById('hirako-css-content').innerHTML = `<pre style="margin:0;color:#4ecdc4;">${css.substring(0, 1000)}</pre>`;
-                document.getElementById('hirako-styles').style.display = 'block';
-            };
-            
-            document.getElementById('hirako-edit-html').onclick = () => {
-                var newHtml = prompt('Edit HTML:', el.outerHTML);
-                if(newHtml) {
-                    el.outerHTML = newHtml;
-                    this.showElementInfo(el);
-                    this.log('HTML element updated!');
-                }
-            };
-        },
-        
-        // Highlight all elements
-        highlightAllElements: function() {
-            var elements = document.querySelectorAll('*');
-            var count = 0;
-            elements.forEach(el => {
-                if(el !== this.panel && !el.id?.includes('hirako')) {
-                    el.style.outline = '1px solid #ff6b6b';
-                    count++;
-                }
-            });
-            this.log(`✨ ${count} elemen telah di-highlight`);
-            setTimeout(() => {
-                elements.forEach(el => {
-                    if(el.style.outline === '1px solid #ff6b6b') el.style.outline = '';
-                });
-            }, 2000);
-        },
-        
-        // Console Tab with log capture
-        consoleLogs: [],
-        originalConsole: {log: null, error: null, warn: null},
-        
-        showConsoleTab: function() {
-            var content = document.getElementById('hirako-content');
-            content.innerHTML = `
-                <div style="margin-bottom:10px;">
-                    <button id="hirako-clear-console" style="background:#ff6b6b;color:#fff;border:none;padding:5px;border-radius:3px;cursor:pointer;">Clear Console</button>
-                    <button id="hirako-run-js" style="background:#4a6bff;color:#fff;border:none;padding:5px;border-radius:3px;margin-left:5px;cursor:pointer;">▶ Run JS</button>
-                </div>
-                <div id="hirako-console-output" style="background:#0a0a0f;height:180px;overflow:auto;padding:5px;font-size:10px;border-radius:5px;"></div>
-                <div style="margin-top:5px;">
-                    <input type="text" id="hirako-js-input" placeholder="JavaScript code..." style="width:70%;background:#2a2a3a;color:#fff;border:1px solid #ff6b6b;padding:5px;border-radius:3px;">
-                    <button id="hirako-execute" style="background:#4a6bff;color:#fff;border:none;padding:5px;border-radius:3px;cursor:pointer;">Execute</button>
-                </div>
-            `;
-            
-            this.captureConsole();
-            this.displayConsoleLogs();
-            
-            document.getElementById('hirako-clear-console').onclick = () => {
-                this.consoleLogs = [];
-                this.displayConsoleLogs();
-            };
-            
-            document.getElementById('hirako-run-js').onclick = () => {
-                var code = document.getElementById('hirako-js-input').value;
-                if(code) this.executeJS(code);
-            };
-            
-            document.getElementById('hirako-execute').onclick = () => {
-                var code = document.getElementById('hirako-js-input').value;
-                if(code) this.executeJS(code);
-            };
-        },
-        
-        captureConsole: function() {
-            var self = this;
-            if(!this.originalConsole.log) {
-                this.originalConsole.log = console.log;
-                this.originalConsole.error = console.error;
-                this.originalConsole.warn = console.warn;
-                
-                console.log = function() {
-                    self.consoleLogs.push(['📝 LOG', new Date().toLocaleTimeString(), ...arguments]);
-                    self.originalConsole.log.apply(console, arguments);
-                    self.displayConsoleLogs();
-                };
-                
-                console.error = function() {
-                    self.consoleLogs.push(['❌ ERROR', new Date().toLocaleTimeString(), ...arguments]);
-                    self.originalConsole.error.apply(console, arguments);
-                    self.displayConsoleLogs();
-                };
-                
-                console.warn = function() {
-                    self.consoleLogs.push(['⚠️ WARN', new Date().toLocaleTimeString(), ...arguments]);
-                    self.originalConsole.warn.apply(console, arguments);
-                    self.displayConsoleLogs();
-                };
-            }
-        },
-        
-        displayConsoleLogs: function() {
-            var output = document.getElementById('hirako-console-output');
-            if(output) {
-                output.innerHTML = this.consoleLogs.map(log => {
-                    var color = log[0].includes('ERROR') ? '#ff6b6b' : (log[0].includes('WARN') ? '#ffa500' : '#4ecdc4');
-                    return `<div style="border-bottom:1px solid #2a2a3a;padding:3px;"><span style="color:${color};">${log.join(' ')}</span></div>`;
-                }).join('') || '<i>No logs yet...</i>';
-                output.scrollTop = output.scrollHeight;
-            }
-        },
-        
-        executeJS: function(code) {
-            try {
-                var result = eval(code);
-                this.consoleLogs.push(['▶ EXEC', new Date().toLocaleTimeString(), 'Result:', result]);
-                this.displayConsoleLogs();
-                this.log(`Code executed: ${code.substring(0, 50)}`);
-            } catch(e) {
-                this.consoleLogs.push(['❌ ERROR', new Date().toLocaleTimeString(), e.message]);
-                this.displayConsoleLogs();
-            }
-        },
-        
-        // Elements Tab - DOM Tree Viewer
-        showElementsTab: function() {
-            var content = document.getElementById('hirako-content');
-            var tree = this.generateDOMTree(document.body, 0);
-            content.innerHTML = `
-                <div style="margin-bottom:5px;">
-                    <button id="hirako-refresh-tree" style="background:#4a6bff;color:#fff;border:none;padding:5px;border-radius:3px;cursor:pointer;">🔄 Refresh</button>
-                    <span style="margin-left:10px;color:#4ecdc4;">Total elements: ${document.querySelectorAll('*').length}</span>
-                </div>
-                <div id="hirako-dom-tree" style="background:#0a0a0f;height:200px;overflow:auto;padding:5px;font-size:11px;border-radius:5px;">${tree}</div>
-            `;
-            
-            document.getElementById('hirako-refresh-tree').onclick = () => {
-                var newTree = this.generateDOMTree(document.body, 0);
-                document.getElementById('hirako-dom-tree').innerHTML = newTree;
-            };
-        },
-        
-        generateDOMTree: function(node, level) {
-            if(node.nodeType === Node.ELEMENT_NODE && !node.id?.includes('hirako')) {
-                var indent = '  '.repeat(level);
-                var tag = node.tagName.toLowerCase();
-                var id = node.id ? '#' + node.id : '';
-                var cls = node.className ? '.' + node.className.toString().split(' ')[0] : '';
-                var content = indent + `<span style="color:#ff6b6b;">&lt;${tag}${id}${cls}&gt;</span>\n`;
-                
-                for(var i = 0; i < node.children.length; i++) {
-                    if(!node.children[i].id?.includes('hirako')) {
-                        content += this.generateDOMTree(node.children[i], level + 1);
-                    }
-                }
-                
-                if(node.children.length === 0 && node.textContent.trim()) {
-                    var text = node.textContent.trim().substring(0, 50);
-                    if(text) content += indent + '  ' + `<span style="color:#4ecdc4;">"${text}"</span>\n`;
-                }
-                
-                content += indent + `<span style="color:#ff6b6b;">&lt;/${tag}&gt;</span>\n`;
-                return content;
-            }
-            return '';
-        },
-        
-        // Network Tab - Monitor network requests
-        networkRequests: [],
-        
-        showNetworkTab: function() {
-            var content = document.getElementById('hirako-content');
-            content.innerHTML = `
-                <div style="margin-bottom:10px;">
-                    <button id="hirako-start-network" style="background:#4a6bff;color:#fff;border:none;padding:5px;border-radius:3px;cursor:pointer;">▶ Start Monitoring</button>
-                    <button id="hirako-clear-network" style="background:#6b6b6b;color:#fff;border:none;padding:5px;border-radius:3px;margin-left:5px;cursor:pointer;">Clear</button>
-                </div>
-                <div id="hirako-network-list" style="background:#0a0a0f;height:200px;overflow:auto;padding:5px;font-size:10px;border-radius:5px;">
-                    <i>Klik "Start Monitoring" untuk melihat network requests</i>
-                </div>
-            `;
-            
-            document.getElementById('hirako-start-network').onclick = () => this.monitorNetwork();
-            document.getElementById('hirako-clear-network').onclick = () => {
-                this.networkRequests = [];
-                this.displayNetworkRequests();
-            };
-        },
-        
-        monitorNetwork: function() {
-            var self = this;
-            if(window.fetch) {
-                var originalFetch = window.fetch;
-                window.fetch = function() {
-                    var url = arguments[0];
-                    var startTime = performance.now();
-                    self.networkRequests.push(['📡 REQ', new Date().toLocaleTimeString(), url]);
-                    self.displayNetworkRequests();
-                    
-                    return originalFetch.apply(this, arguments).then(response => {
-                        var endTime = performance.now();
-                        self.networkRequests.push(['✅ RES', new Date().toLocaleTimeString(), url, `${Math.round(endTime - startTime)}ms`]);
-                        self.displayNetworkRequests();
-                        return response;
-                    });
-                };
-            }
-            
-            if(window.XMLHttpRequest) {
-                var originalOpen = XMLHttpRequest.prototype.open;
-                XMLHttpRequest.prototype.open = function() {
-                    this._url = arguments[1];
-                    this._method = arguments[0];
-                    var startTime = performance.now();
-                    self.networkRequests.push(['📡 XHR', new Date().toLocaleTimeString(), this._method, this._url]);
-                    self.displayNetworkRequests();
-                    
-                    this.addEventListener('load', function() {
-                        var endTime = performance.now();
-                        self.networkRequests.push(['✅ XHR Done', new Date().toLocaleTimeString(), this._url, `${Math.round(endTime - startTime)}ms`, `Status: ${this.status}`]);
-                        self.displayNetworkRequests();
-                    });
-                    
-                    return originalOpen.apply(this, arguments);
-                };
-            }
-            
-            this.log('🌐 Network monitoring aktif!');
-        },
-        
-        displayNetworkRequests: function() {
-            var container = document.getElementById('hirako-network-list');
-            if(container) {
-                container.innerHTML = this.networkRequests.map(req => {
-                    var color = req[0].includes('✅') ? '#4ecdc4' : '#ffa500';
-                    return `<div style="border-bottom:1px solid #2a2a3a;padding:3px;"><span style="color:${color};">${req.join(' ')}</span></div>`;
-                }).join('') || '<i>No network requests captured...</i>';
-            }
-        },
-        
-        // Storage Tab
-        showStorageTab: function() {
-            var content = document.getElementById('hirako-content');
-            var localStorage = JSON.stringify(window.localStorage, null, 2);
-            var sessionStorage = JSON.stringify(window.sessionStorage, null, 2);
-            var cookies = document.cookie;
-            
-            content.innerHTML = `
-                <div style="margin-bottom:10px;">
-                    <button id="hirako-clear-storage" style="background:#ff6b6b;color:#fff;border:none;padding:5px;border-radius:3px;cursor:pointer;">🗑 Clear All Storage</button>
-                </div>
-                <div style="background:#0a0a0f;height:200px;overflow:auto;padding:5px;font-size:10px;border-radius:5px;">
-                    <b>💾 Local Storage:</b><br>
-                    <pre style="color:#4ecdc4;">${localStorage || '(empty)'}</pre>
-                    <hr>
-                    <b>💿 Session Storage:</b><br>
-                    <pre style="color:#4ecdc4;">${sessionStorage || '(empty)'}</pre>
-                    <hr>
-                    <b>🍪 Cookies:</b><br>
-                    <pre style="color:#4ecdc4;">${cookies || '(empty)'}</pre>
-                </div>
-            `;
-            
-            document.getElementById('hirako-clear-storage').onclick = () => {
-                if(confirm('Clear all storage?')) {
-                    localStorage.clear();
-                    sessionStorage.clear();
-                    this.log('Storage cleared!');
-                    this.showStorageTab();
-                }
-            };
-        },
-        
-        // Performance Tab
-        showPerformanceTab: function() {
-            var timing = window.performance.timing;
-            var loadTime = timing.loadEventEnd - timing.navigationStart;
-            var domTime = timing.domComplete - timing.domInteractive;
-            var requestTime = timing.responseEnd - timing.requestStart;
-            
-            var content = document.getElementById('hirako-content');
-            content.innerHTML = `
-                <div style="background:#0a0a0f;padding:10px;border-radius:5px;font-size:11px;">
-                    <b>⚡ Performance Metrics:</b><br><br>
-                    🚀 Page Load: <span style="color:#4ecdc4;">${loadTime}ms</span><br>
-                    📄 DOM Ready: <span style="color:#4ecdc4;">${domTime}ms</span><br>
-                    🌐 Network Request: <span style="color:#4ecdc4;">${requestTime}ms</span><br>
-                    🎯 Memory Used: <span style="color:#4ecdc4;">${Math.round(performance.memory?.usedJSHeapSize / 1048576) || 'N/A'} MB</span><br>
-                    📊 Total Elements: <span style="color:#4ecdc4;">${document.querySelectorAll('*').length}</span><br>
-                    💾 DOM Size: <span style="color:#4ecdc4;">${document.documentElement.outerHTML.length.toLocaleString()} bytes</span><br>
-                    <br>
-                    <button id="hirako-gc" style="background:#ff6b6b;color:#fff;border:none;padding:5px;border-radius:3px;cursor:pointer;">🧹 Run GC (if available)</button>
-                </div>
-            `;
-            
-            document.getElementById('hirako-gc').onclick = () => {
-                if(window.gc) {
-                    window.gc();
-                    this.log('Garbage collection triggered');
-                } else {
-                    this.log('GC not exposed. Run Chrome with --js-flags="--expose-gc"');
-                }
-            };
-        },
-        
-        // Utility functions
-        log: function(msg) {
-            if(this.consoleLogs) {
-                this.consoleLogs.push(['📢 HIRAKO', new Date().toLocaleTimeString(), msg]);
-                this.displayConsoleLogs();
-            }
-        },
-        
-        attachEvents: function() {
-            // Add resize handler for panel
-            window.addEventListener('resize', () => {
-                if(this.panel) {
-                    // Maintain panel position
-                }
-            });
-        },
-        
-        show: function() {
-            if(this.panel) this.panel.style.display = 'block';
-        },
-        
-        destroy: function() {
-            if(this.panel) this.panel.remove();
-            this.active = false;
-            
-            // Restore console
-            if(this.originalConsole.log) {
-                console.log = this.originalConsole.log;
-                console.error = this.originalConsole.error;
-                console.warn = this.originalConsole.warn;
-            }
-        }
-    };
-    
-    // Start Hirako
-    Hirako.init();
-    
-    // Make globally accessible
-    window.Hirako = Hirako;
+var H=function(){
+var V='1.0.0',$={},E=[];
+var T=function(t,e){
+for(var n=0;n<e.length;n++){var r=e[n];r.enumerable=r.enumerable||!1,r.configurable=!0,"value"in r&&(r.writable=!0),Object.defineProperty(t,r.key,r)}
+};
+var $1=function(t,e,n){
+return e&&T(t.prototype,e),n&&T(t,n),t
+};
+var _=function t(e,n,r){null===e&&(e=Function.prototype);var i=Object.create(e&&e.prototype);return i&&(n&&$1(i,n,r)),i};
+var L=function(t){return!!t&&"object"==typeof t};
+var I=function(t,e){for(var n in e)t[n]=e[n];return t};
+var C=function(t,e){for(var n in e)t[n]=e[n];return t};
+var D=function(t,e,n){t.addEventListener(e,n)};
+var N=function(t){t.parentNode&&t.parentNode.removeChild(t)};
+var S=document.createElement.bind(document);
+var R=function(t){return document.querySelector(t)};
+var O=function(t){return document.querySelectorAll(t)};
+var B=function(t){return Array.from(t)};
+var q=function(t,e){for(var n=0;n<t.length;n++)t[n]===e&&t.splice(n,1)};
+var z=function(t){var e="";return t&&(e=t.replace(/[&<>]/g,function(t){
+return{'&':'&amp;','<':'&lt;','>':'&gt;'}[t]})),e};
+var U=function(t,e,n){for(var r=0;r<t.length;r++)if(t[r]===e)return r;return-1};
+var F=function(){return(new Date).toLocaleTimeString()};
+var G=function(t){try{return JSON.parse(t)}catch(e){return t}};
+var H=function(t){try{return JSON.stringify(t,null,2)}catch(e){return t+""}};
+var M={};
+var X={init:function(){
+if(M.active)return;
+M.panel=document.createElement('div');
+M.panel.id='hirako-v2';
+M.panel.style.cssText='position:fixed;bottom:0;left:0;right:0;background:#1e1e2e;color:#fff;z-index:999999;font-family:monospace;font-size:12px;border-top:3px solid #ff6b6b;box-shadow:0 -2px 10px rgba(0,0,0,0.3);transition:all 0.3s ease;';
+M.panel.innerHTML='<div style="display:flex;background:#2a2a3a;padding:8px;border-bottom:1px solid #3a3a4a;"><div style="flex:1;display:flex;gap:10px;"><button data-tab="inspect" class="htab active" style="background:#ff6b6b;color:#fff;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;">🔍 Inspect</button><button data-tab="console" class="htab" style="background:#3a3a4a;color:#fff;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;">📝 Console</button><button data-tab="elements" class="htab" style="background:#3a3a4a;color:#fff;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;">📄 DOM</button><button data-tab="storage" class="htab" style="background:#3a3a4a;color:#fff;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;">💾 Storage</button><button data-tab="info" class="htab" style="background:#3a3a4a;color:#fff;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;">ℹ️ Info</button></div><div><button id="hclose" style="background:#ff6b6b;color:#fff;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;">✖</button></div></div><div id="hcontent" style="height:250px;overflow:auto;padding:10px;background:#1e1e2e;"></div><div style="background:#2a2a3a;padding:5px;font-size:10px;border-top:1px solid #3a3a4a;"><span>🎯 Hirako v1.0</span><span style="margin-left:15px;">⚡ Tap elements to inspect</span></div>';
+document.body.appendChild(M.panel);
+M.active=true;
+M.el=M.panel;
+document.querySelectorAll('.htab').forEach(function(t){
+t.onclick=function(){M.switchTab(t.dataset.tab)}
+});
+document.getElementById('hclose').onclick=function(){M.destroy()};
+M.switchTab('inspect');
+},switchTab:function(t){
+document.querySelectorAll('.htab').forEach(function(e){
+e.style.background='#3a3a4a'
+});
+document.querySelector('[data-tab="'+t+'"]').style.background='#ff6b6b';
+if(t==='inspect')M.showInspect();
+if(t==='console')M.showConsole();
+if(t==='elements')M.showElements();
+if(t==='storage')M.showStorage();
+if(t==='info')M.showInfo();
+},showInspect:function(){
+var c=document.getElementById('hcontent');
+c.innerHTML='<div style="margin-bottom:10px;"><button id="hpick" style="background:#ff6b6b;color:#fff;border:none;padding:8px;border-radius:5px;margin-right:5px;cursor:pointer;">🎯 Pilih Elemen</button><button id="hhighlight" style="background:#4a6bff;color:#fff;border:none;padding:8px;border-radius:5px;cursor:pointer;">✨ Highlight Semua</button><button id="hclear" style="background:#6b6b6b;color:#fff;border:none;padding:8px;border-radius:5px;cursor:pointer;">🗑 Clear</button></div><div id="hresult" style="background:#2a2a3a;padding:10px;border-radius:5px;font-size:11px;"><i>Klik "Pilih Elemen" lalu tap elemen di halaman</i></div><div id="hcss" style="margin-top:10px;background:#2a2a3a;padding:10px;border-radius:5px;display:none;"><b>🎨 CSS</b><div id="hcssc" style="font-size:11px;margin-top:5px;"></div></div>';
+document.getElementById('hpick').onclick=function(){M.pickElement()};
+document.getElementById('hhighlight').onclick=function(){M.highlightAll()};
+document.getElementById('hclear').onclick=function(){
+document.getElementById('hresult').innerHTML='<i>Ready to inspect...</i>';
+document.getElementById('hcss').style.display='none';
+};
+},pickElement:function(){
+var ov=S('div');
+ov.id='hpoverlay';
+ov.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(255,107,107,0.1);z-index:1000000;cursor:crosshair;';
+document.body.appendChild(ov);
+var tip=S('div');
+tip.id='hptip';
+tip.style.cssText='position:fixed;background:#ff6b6b;color:#fff;padding:5px 10px;border-radius:5px;font-size:12px;z-index:1000001;pointer-events:none;';
+document.body.appendChild(tip);
+var hover=function(e){
+var el=e.target;
+tip.innerHTML=el.tagName+(el.id?'#'+el.id:'')+(el.className?'.'+el.className.split(' ')[0]:'');
+tip.style.left=(e.clientX+15)+'px';
+tip.style.top=(e.clientY+15)+'px';
+el.style.outline='2px solid #ff6b6b';
+setTimeout(function(){if(el.style.outline)el.style.outline=''},100);
+};
+var pick=function(e){
+e.preventDefault();
+e.stopPropagation();
+var el=e.target;
+var info='<b>📦 Element:</b> '+el.tagName+'<br>';
+info+='<b>🆔 ID:</b> '+ (el.id||'-')+'<br>';
+info+='<b>📝 Class:</b> '+ (el.className||'-')+'<br>';
+info+='<b>📐 Size:</b> '+Math.round(el.offsetWidth)+'x'+Math.round(el.offsetHeight)+'px<br>';
+info+='<b>👶 Children:</b> '+el.children.length+'<br>';
+info+='<b>📄 InnerHTML:</b> <span style="color:#ffa500;">'+z(el.innerHTML.substring(0,100))+'</span><br>';
+info+='<button id="hviewcss" style="background:#4a6bff;color:#fff;border:none;padding:5px;border-radius:3px;margin-top:5px;cursor:pointer;">🎨 Lihat CSS</button> ';
+info+='<button id="hedithtml" style="background:#ffa500;color:#fff;border:none;padding:5px;border-radius:3px;margin-top:5px;cursor:pointer;">✏️ Edit HTML</button>';
+document.getElementById('hresult').innerHTML=info;
+document.getElementById('hviewcss')&&(document.getElementById('hviewcss').onclick=function(){
+var s=getComputedStyle(el);
+var css='';
+for(var i=0;i<s.length;i++){var p=s[i];var v=s.getPropertyValue(p);if(v&&v!=='normal'&&v!=='auto'&&v!=='none')css+=p+': '+v+';\n';}
+document.getElementById('hcssc').innerHTML='<pre style="margin:0;color:#4ecdc4;">'+css.substring(0,1000)+'</pre>';
+document.getElementById('hcss').style.display='block';
+});
+document.getElementById('hedithtml')&&(document.getElementById('hedithtml').onclick=function(){
+var nh=prompt('Edit HTML:',el.outerHTML);
+if(nh){el.outerHTML=nh;M.pickElement();}
+});
+document.removeEventListener('mouseover',hover);
+document.removeEventListener('click',pick);
+ov.remove();
+tip.remove();
+};
+document.addEventListener('mouseover',hover);
+document.addEventListener('click',pick);
+},highlightAll:function(){
+var els=document.querySelectorAll('*');
+var c=0;
+els.forEach(function(el){
+if(el!==M.panel&&!el.id?.includes('hirako')){
+el.style.outline='1px solid #ff6b6b';
+c++;
+}
+});
+setTimeout(function(){
+els.forEach(function(el){
+if(el.style.outline==='1px solid #ff6b6b')el.style.outline='';
+});
+},2000);
+},logs:[],
+origLog:{log:null,error:null,warn:null,info:null},
+showConsole:function(){
+var c=document.getElementById('hcontent');
+c.innerHTML='<div style="margin-bottom:10px;"><button id="hclearconsole" style="background:#ff6b6b;color:#fff;border:none;padding:5px;border-radius:3px;cursor:pointer;">Clear</button><button id="hrunjs" style="background:#4a6bff;color:#fff;border:none;padding:5px;border-radius:3px;margin-left:5px;cursor:pointer;">Run JS</button></div><div id="hconsoleout" style="background:#0a0a0f;height:180px;overflow:auto;padding:5px;font-size:10px;border-radius:5px;"></div><div style="margin-top:5px;"><input type="text" id="hjsinput" placeholder="JavaScript code..." style="width:70%;background:#2a2a3a;color:#fff;border:1px solid #ff6b6b;padding:5px;border-radius:3px;"><button id="hexec" style="background:#4a6bff;color:#fff;border:none;padding:5px;border-radius:3px;cursor:pointer;">Execute</button></div>';
+M.captureConsole();
+M.updateConsole();
+document.getElementById('hclearconsole').onclick=function(){M.logs=[];M.updateConsole();};
+document.getElementById('hrunjs').onclick=function(){
+var code=document.getElementById('hjsinput').value;
+if(code)M.execJS(code);
+};
+document.getElementById('hexec').onclick=function(){
+var code=document.getElementById('hjsinput').value;
+if(code)M.execJS(code);
+};
+},captureConsole:function(){
+if(M.origLog.log)return;
+M.origLog.log=console.log;
+M.origLog.error=console.error;
+M.origLog.warn=console.warn;
+M.origLog.info=console.info;
+var self=M;
+console.log=function(){self.logs.push(['📝 LOG',F(),Array.from(arguments).join(' ')]);M.origLog.log.apply(console,arguments);self.updateConsole();};
+console.error=function(){self.logs.push(['❌ ERROR',F(),Array.from(arguments).join(' ')]);M.origLog.error.apply(console,arguments);self.updateConsole();};
+console.warn=function(){self.logs.push(['⚠️ WARN',F(),Array.from(arguments).join(' ')]);M.origLog.warn.apply(console,arguments);self.updateConsole();};
+console.info=function(){self.logs.push(['ℹ️ INFO',F(),Array.from(arguments).join(' ')]);M.origLog.info.apply(console,arguments);self.updateConsole();};
+},updateConsole:function(){
+var out=document.getElementById('hconsoleout');
+if(out){
+out.innerHTML=M.logs.map(function(l){
+var col=l[0].includes('ERROR')?'#ff6b6b':(l[0].includes('WARN')?'#ffa500':(l[0].includes('INFO')?'#4ecdc4':'#fff'));
+return '<div style="border-bottom:1px solid #2a2a3a;padding:3px;"><span style="color:'+col+';">'+l.join(' ')+'</span></div>';
+}).join('')||'<i>No logs...</i>';
+out.scrollTop=out.scrollHeight;
+}
+},execJS:function(code){
+try{
+var res=eval(code);
+M.logs.push(['▶ EXEC',F(),code,'→',res]);
+M.updateConsole();
+}catch(e){
+M.logs.push(['❌ ERROR',F(),e.message]);
+M.updateConsole();
+}
+},showElements:function(){
+var c=document.getElementById('hcontent');
+c.innerHTML='<div style="margin-bottom:5px;"><button id="hrefreshdom" style="background:#4a6bff;color:#fff;border:none;padding:5px;border-radius:3px;cursor:pointer;">🔄 Refresh</button><span style="margin-left:10px;color:#4ecdc4;">Total: '+document.querySelectorAll('*').length+'</span></div><div id="hdomtree" style="background:#0a0a0f;height:200px;overflow:auto;padding:5px;font-size:11px;border-radius:5px;">'+M.genDOMTree(document.body,0)+'</div>';
+document.getElementById('hrefreshdom').onclick=function(){
+document.getElementById('hdomtree').innerHTML=M.genDOMTree(document.body,0);
+};
+},genDOMTree:function(n,l){
+if(n.nodeType===1&&!n.id?.includes('hirako')){
+var sp='  '.repeat(l);
+var tag=n.tagName.toLowerCase();
+var id=n.id?'#'+n.id:'';
+var cls=n.className?'.'+n.className.toString().split(' ')[0]:'';
+var html=sp+'<span style="color:#ff6b6b;">&lt;'+tag+id+cls+'&gt;</span>\n';
+for(var i=0;i<n.children.length;i++){
+if(!n.children[i].id?.includes('hirako')){
+html+=M.genDOMTree(n.children[i],l+1);
+}
+}
+if(n.children.length===0&&n.textContent.trim()){
+var txt=n.textContent.trim().substring(0,50);
+if(txt)html+=sp+'  '+'<span style="color:#4ecdc4;">"'+z(txt)+'"</span>\n';
+}
+html+=sp+'<span style="color:#ff6b6b;">&lt;/'+tag+'&gt;</span>\n';
+return html;
+}
+return '';
+},showStorage:function(){
+var c=document.getElementById('hcontent');
+var ls=localStorage;
+var ss=sessionStorage;
+var lsd={},ssd={};
+try{for(var i=0;i<ls.length;i++){var k=ls.key(i);lsd[k]=ls.getItem(k);}}catch(e){}
+try{for(var j=0;j<ss.length;j++){var sk=ss.key(j);ssd[sk]=ss.getItem(sk);}}catch(e){}
+var lh='',sh='';
+for(var lk in lsd){lh+='<tr><td style="color:#ffa500;">'+z(lk)+'</td><td style="color:#4ecdc4;">'+z(lsd[lk].substring(0,100))+'</td></tr>';}
+for(var skk in ssd){sh+='<tr><td style="color:#ffa500;">'+z(skk)+'</td><td style="color:#4ecdc4;">'+z(ssd[skk].substring(0,100))+'</td></tr>';}
+c.innerHTML='<div style="margin-bottom:10px;"><button id="hclearallstorage" style="background:#ff6b6b;color:#fff;border:none;padding:5px;border-radius:3px;cursor:pointer;">🗑 Clear All</button></div><div style="background:#0a0a0f;height:200px;overflow:auto;padding:5px;font-size:10px;border-radius:5px;"><b>💾 Local Storage:</b><br><table style="width:100%">'+lh+'</table><hr><b>💿 Session Storage:</b><br><table style="width:100%">'+sh+'</table><hr><b>🍪 Cookies:</b><br><pre style="color:#4ecdc4;">'+z(document.cookie||'(empty)')+'</pre></div>';
+document.getElementById('hclearallstorage').onclick=function(){
+if(confirm('Clear all storage?')){
+localStorage.clear();
+sessionStorage.clear();
+M.showStorage();
+}
+};
+},showInfo:function(){
+var c=document.getElementById('hcontent');
+var ua=navigator.userAgent;
+var scr=screen;
+var info='<div style="background:#0a0a0f;padding:10px;border-radius:5px;font-size:11px;">';
+info+='<b>🔧 System Info:</b><br><br>';
+info+='🌐 User Agent: <span style="color:#4ecdc4;">'+z(ua.substring(0,200))+'</span><br>';
+info+='📱 Screen: <span style="color:#4ecdc4;">'+scr.width+'x'+scr.height+'</span><br>';
+info+='👁️ Viewport: <span style="color:#4ecdc4;">'+window.innerWidth+'x'+window.innerHeight+'</span><br>';
+info+='🔍 Pixel Ratio: <span style="color:#4ecdc4;">'+window.devicePixelRatio+'</span><br>';
+info+='📄 URL: <span style="color:#4ecdc4;word-break:break-all;">'+z(location.href)+'</span><br>';
+info+='⏰ Time: <span style="color:#4ecdc4;">'+new Date().toLocaleString()+'</span><br>';
+info+='💾 Memory: <span style="color:#4ecdc4;">'+(performance.memory?Math.round(performance.memory.usedJSHeapSize/1048576)+' MB':'N/A')+'</span><br>';
+info+='📊 DOM Elements: <span style="color:#4ecdc4;">'+document.querySelectorAll('*').length+'</span><br>';
+info+='</div>';
+c.innerHTML=info;
+},destroy:function(){
+if(M.panel)M.panel.remove();
+if(M.origLog.log){
+console.log=M.origLog.log;
+console.error=M.origLog.error;
+console.warn=M.origLog.warn;
+console.info=M.origLog.info;
+}
+M.active=false;
+}
+};
+return X;
+}();
+H.init();
+window.hirako=H;
 })();
