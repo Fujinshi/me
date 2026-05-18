@@ -1,243 +1,652 @@
-javascript:(function(){
-var H=function(){
-var V='1.0.0',$={},E=[];
-var T=function(t,e){
-for(var n=0;n<e.length;n++){var r=e[n];r.enumerable=r.enumerable||!1,r.configurable=!0,"value"in r&&(r.writable=!0),Object.defineProperty(t,r.key,r)}
-};
-var $1=function(t,e,n){
-return e&&T(t.prototype,e),n&&T(t,n),t
-};
-var _=function t(e,n,r){null===e&&(e=Function.prototype);var i=Object.create(e&&e.prototype);return i&&(n&&$1(i,n,r)),i};
-var L=function(t){return!!t&&"object"==typeof t};
-var I=function(t,e){for(var n in e)t[n]=e[n];return t};
-var C=function(t,e){for(var n in e)t[n]=e[n];return t};
-var D=function(t,e,n){t.addEventListener(e,n)};
-var N=function(t){t.parentNode&&t.parentNode.removeChild(t)};
-var S=document.createElement.bind(document);
-var R=function(t){return document.querySelector(t)};
-var O=function(t){return document.querySelectorAll(t)};
-var B=function(t){return Array.from(t)};
-var q=function(t,e){for(var n=0;n<t.length;n++)t[n]===e&&t.splice(n,1)};
-var z=function(t){var e="";return t&&(e=t.replace(/[&<>]/g,function(t){
-return{'&':'&amp;','<':'&lt;','>':'&gt;'}[t]})),e};
-var U=function(t,e,n){for(var r=0;r<t.length;r++)if(t[r]===e)return r;return-1};
-var F=function(){return(new Date).toLocaleTimeString()};
-var G=function(t){try{return JSON.parse(t)}catch(e){return t}};
-var H=function(t){try{return JSON.stringify(t,null,2)}catch(e){return t+""}};
-var M={};
-var X={init:function(){
-if(M.active)return;
-M.panel=document.createElement('div');
-M.panel.id='hirako-v2';
-M.panel.style.cssText='position:fixed;bottom:0;left:0;right:0;background:#1e1e2e;color:#fff;z-index:999999;font-family:monospace;font-size:12px;border-top:3px solid #ff6b6b;box-shadow:0 -2px 10px rgba(0,0,0,0.3);transition:all 0.3s ease;';
-M.panel.innerHTML='<div style="display:flex;background:#2a2a3a;padding:8px;border-bottom:1px solid #3a3a4a;"><div style="flex:1;display:flex;gap:10px;"><button data-tab="inspect" class="htab active" style="background:#ff6b6b;color:#fff;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;">🔍 Inspect</button><button data-tab="console" class="htab" style="background:#3a3a4a;color:#fff;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;">📝 Console</button><button data-tab="elements" class="htab" style="background:#3a3a4a;color:#fff;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;">📄 DOM</button><button data-tab="storage" class="htab" style="background:#3a3a4a;color:#fff;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;">💾 Storage</button><button data-tab="info" class="htab" style="background:#3a3a4a;color:#fff;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;">ℹ️ Info</button></div><div><button id="hclose" style="background:#ff6b6b;color:#fff;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;">✖</button></div></div><div id="hcontent" style="height:250px;overflow:auto;padding:10px;background:#1e1e2e;"></div><div style="background:#2a2a3a;padding:5px;font-size:10px;border-top:1px solid #3a3a4a;"><span>🎯 Hirako v1.0</span><span style="margin-left:15px;">⚡ Tap elements to inspect</span></div>';
-document.body.appendChild(M.panel);
-M.active=true;
-M.el=M.panel;
-document.querySelectorAll('.htab').forEach(function(t){
-t.onclick=function(){M.switchTab(t.dataset.tab)}
-});
-document.getElementById('hclose').onclick=function(){M.destroy()};
-M.switchTab('inspect');
-},switchTab:function(t){
-document.querySelectorAll('.htab').forEach(function(e){
-e.style.background='#3a3a4a'
-});
-document.querySelector('[data-tab="'+t+'"]').style.background='#ff6b6b';
-if(t==='inspect')M.showInspect();
-if(t==='console')M.showConsole();
-if(t==='elements')M.showElements();
-if(t==='storage')M.showStorage();
-if(t==='info')M.showInfo();
-},showInspect:function(){
-var c=document.getElementById('hcontent');
-c.innerHTML='<div style="margin-bottom:10px;"><button id="hpick" style="background:#ff6b6b;color:#fff;border:none;padding:8px;border-radius:5px;margin-right:5px;cursor:pointer;">🎯 Pilih Elemen</button><button id="hhighlight" style="background:#4a6bff;color:#fff;border:none;padding:8px;border-radius:5px;cursor:pointer;">✨ Highlight Semua</button><button id="hclear" style="background:#6b6b6b;color:#fff;border:none;padding:8px;border-radius:5px;cursor:pointer;">🗑 Clear</button></div><div id="hresult" style="background:#2a2a3a;padding:10px;border-radius:5px;font-size:11px;"><i>Klik "Pilih Elemen" lalu tap elemen di halaman</i></div><div id="hcss" style="margin-top:10px;background:#2a2a3a;padding:10px;border-radius:5px;display:none;"><b>🎨 CSS</b><div id="hcssc" style="font-size:11px;margin-top:5px;"></div></div>';
-document.getElementById('hpick').onclick=function(){M.pickElement()};
-document.getElementById('hhighlight').onclick=function(){M.highlightAll()};
-document.getElementById('hclear').onclick=function(){
-document.getElementById('hresult').innerHTML='<i>Ready to inspect...</i>';
-document.getElementById('hcss').style.display='none';
-};
-},pickElement:function(){
-var ov=S('div');
-ov.id='hpoverlay';
-ov.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(255,107,107,0.1);z-index:1000000;cursor:crosshair;';
-document.body.appendChild(ov);
-var tip=S('div');
-tip.id='hptip';
-tip.style.cssText='position:fixed;background:#ff6b6b;color:#fff;padding:5px 10px;border-radius:5px;font-size:12px;z-index:1000001;pointer-events:none;';
-document.body.appendChild(tip);
-var hover=function(e){
-var el=e.target;
-tip.innerHTML=el.tagName+(el.id?'#'+el.id:'')+(el.className?'.'+el.className.split(' ')[0]:'');
-tip.style.left=(e.clientX+15)+'px';
-tip.style.top=(e.clientY+15)+'px';
-el.style.outline='2px solid #ff6b6b';
-setTimeout(function(){if(el.style.outline)el.style.outline=''},100);
-};
-var pick=function(e){
-e.preventDefault();
-e.stopPropagation();
-var el=e.target;
-var info='<b>📦 Element:</b> '+el.tagName+'<br>';
-info+='<b>🆔 ID:</b> '+ (el.id||'-')+'<br>';
-info+='<b>📝 Class:</b> '+ (el.className||'-')+'<br>';
-info+='<b>📐 Size:</b> '+Math.round(el.offsetWidth)+'x'+Math.round(el.offsetHeight)+'px<br>';
-info+='<b>👶 Children:</b> '+el.children.length+'<br>';
-info+='<b>📄 InnerHTML:</b> <span style="color:#ffa500;">'+z(el.innerHTML.substring(0,100))+'</span><br>';
-info+='<button id="hviewcss" style="background:#4a6bff;color:#fff;border:none;padding:5px;border-radius:3px;margin-top:5px;cursor:pointer;">🎨 Lihat CSS</button> ';
-info+='<button id="hedithtml" style="background:#ffa500;color:#fff;border:none;padding:5px;border-radius:3px;margin-top:5px;cursor:pointer;">✏️ Edit HTML</button>';
-document.getElementById('hresult').innerHTML=info;
-document.getElementById('hviewcss')&&(document.getElementById('hviewcss').onclick=function(){
-var s=getComputedStyle(el);
-var css='';
-for(var i=0;i<s.length;i++){var p=s[i];var v=s.getPropertyValue(p);if(v&&v!=='normal'&&v!=='auto'&&v!=='none')css+=p+': '+v+';\n';}
-document.getElementById('hcssc').innerHTML='<pre style="margin:0;color:#4ecdc4;">'+css.substring(0,1000)+'</pre>';
-document.getElementById('hcss').style.display='block';
-});
-document.getElementById('hedithtml')&&(document.getElementById('hedithtml').onclick=function(){
-var nh=prompt('Edit HTML:',el.outerHTML);
-if(nh){el.outerHTML=nh;M.pickElement();}
-});
-document.removeEventListener('mouseover',hover);
-document.removeEventListener('click',pick);
-ov.remove();
-tip.remove();
-};
-document.addEventListener('mouseover',hover);
-document.addEventListener('click',pick);
-},highlightAll:function(){
-var els=document.querySelectorAll('*');
-var c=0;
-els.forEach(function(el){
-if(el!==M.panel&&!el.id?.includes('hirako')){
-el.style.outline='1px solid #ff6b6b';
-c++;
-}
-});
-setTimeout(function(){
-els.forEach(function(el){
-if(el.style.outline==='1px solid #ff6b6b')el.style.outline='';
-});
-},2000);
-},logs:[],
-origLog:{log:null,error:null,warn:null,info:null},
-showConsole:function(){
-var c=document.getElementById('hcontent');
-c.innerHTML='<div style="margin-bottom:10px;"><button id="hclearconsole" style="background:#ff6b6b;color:#fff;border:none;padding:5px;border-radius:3px;cursor:pointer;">Clear</button><button id="hrunjs" style="background:#4a6bff;color:#fff;border:none;padding:5px;border-radius:3px;margin-left:5px;cursor:pointer;">Run JS</button></div><div id="hconsoleout" style="background:#0a0a0f;height:180px;overflow:auto;padding:5px;font-size:10px;border-radius:5px;"></div><div style="margin-top:5px;"><input type="text" id="hjsinput" placeholder="JavaScript code..." style="width:70%;background:#2a2a3a;color:#fff;border:1px solid #ff6b6b;padding:5px;border-radius:3px;"><button id="hexec" style="background:#4a6bff;color:#fff;border:none;padding:5px;border-radius:3px;cursor:pointer;">Execute</button></div>';
-M.captureConsole();
-M.updateConsole();
-document.getElementById('hclearconsole').onclick=function(){M.logs=[];M.updateConsole();};
-document.getElementById('hrunjs').onclick=function(){
-var code=document.getElementById('hjsinput').value;
-if(code)M.execJS(code);
-};
-document.getElementById('hexec').onclick=function(){
-var code=document.getElementById('hjsinput').value;
-if(code)M.execJS(code);
-};
-},captureConsole:function(){
-if(M.origLog.log)return;
-M.origLog.log=console.log;
-M.origLog.error=console.error;
-M.origLog.warn=console.warn;
-M.origLog.info=console.info;
-var self=M;
-console.log=function(){self.logs.push(['📝 LOG',F(),Array.from(arguments).join(' ')]);M.origLog.log.apply(console,arguments);self.updateConsole();};
-console.error=function(){self.logs.push(['❌ ERROR',F(),Array.from(arguments).join(' ')]);M.origLog.error.apply(console,arguments);self.updateConsole();};
-console.warn=function(){self.logs.push(['⚠️ WARN',F(),Array.from(arguments).join(' ')]);M.origLog.warn.apply(console,arguments);self.updateConsole();};
-console.info=function(){self.logs.push(['ℹ️ INFO',F(),Array.from(arguments).join(' ')]);M.origLog.info.apply(console,arguments);self.updateConsole();};
-},updateConsole:function(){
-var out=document.getElementById('hconsoleout');
-if(out){
-out.innerHTML=M.logs.map(function(l){
-var col=l[0].includes('ERROR')?'#ff6b6b':(l[0].includes('WARN')?'#ffa500':(l[0].includes('INFO')?'#4ecdc4':'#fff'));
-return '<div style="border-bottom:1px solid #2a2a3a;padding:3px;"><span style="color:'+col+';">'+l.join(' ')+'</span></div>';
-}).join('')||'<i>No logs...</i>';
-out.scrollTop=out.scrollHeight;
-}
-},execJS:function(code){
-try{
-var res=eval(code);
-M.logs.push(['▶ EXEC',F(),code,'→',res]);
-M.updateConsole();
-}catch(e){
-M.logs.push(['❌ ERROR',F(),e.message]);
-M.updateConsole();
-}
-},showElements:function(){
-var c=document.getElementById('hcontent');
-c.innerHTML='<div style="margin-bottom:5px;"><button id="hrefreshdom" style="background:#4a6bff;color:#fff;border:none;padding:5px;border-radius:3px;cursor:pointer;">🔄 Refresh</button><span style="margin-left:10px;color:#4ecdc4;">Total: '+document.querySelectorAll('*').length+'</span></div><div id="hdomtree" style="background:#0a0a0f;height:200px;overflow:auto;padding:5px;font-size:11px;border-radius:5px;">'+M.genDOMTree(document.body,0)+'</div>';
-document.getElementById('hrefreshdom').onclick=function(){
-document.getElementById('hdomtree').innerHTML=M.genDOMTree(document.body,0);
-};
-},genDOMTree:function(n,l){
-if(n.nodeType===1&&!n.id?.includes('hirako')){
-var sp='  '.repeat(l);
-var tag=n.tagName.toLowerCase();
-var id=n.id?'#'+n.id:'';
-var cls=n.className?'.'+n.className.toString().split(' ')[0]:'';
-var html=sp+'<span style="color:#ff6b6b;">&lt;'+tag+id+cls+'&gt;</span>\n';
-for(var i=0;i<n.children.length;i++){
-if(!n.children[i].id?.includes('hirako')){
-html+=M.genDOMTree(n.children[i],l+1);
-}
-}
-if(n.children.length===0&&n.textContent.trim()){
-var txt=n.textContent.trim().substring(0,50);
-if(txt)html+=sp+'  '+'<span style="color:#4ecdc4;">"'+z(txt)+'"</span>\n';
-}
-html+=sp+'<span style="color:#ff6b6b;">&lt;/'+tag+'&gt;</span>\n';
-return html;
-}
-return '';
-},showStorage:function(){
-var c=document.getElementById('hcontent');
-var ls=localStorage;
-var ss=sessionStorage;
-var lsd={},ssd={};
-try{for(var i=0;i<ls.length;i++){var k=ls.key(i);lsd[k]=ls.getItem(k);}}catch(e){}
-try{for(var j=0;j<ss.length;j++){var sk=ss.key(j);ssd[sk]=ss.getItem(sk);}}catch(e){}
-var lh='',sh='';
-for(var lk in lsd){lh+='<tr><td style="color:#ffa500;">'+z(lk)+'</td><td style="color:#4ecdc4;">'+z(lsd[lk].substring(0,100))+'</td></tr>';}
-for(var skk in ssd){sh+='<tr><td style="color:#ffa500;">'+z(skk)+'</td><td style="color:#4ecdc4;">'+z(ssd[skk].substring(0,100))+'</td></tr>';}
-c.innerHTML='<div style="margin-bottom:10px;"><button id="hclearallstorage" style="background:#ff6b6b;color:#fff;border:none;padding:5px;border-radius:3px;cursor:pointer;">🗑 Clear All</button></div><div style="background:#0a0a0f;height:200px;overflow:auto;padding:5px;font-size:10px;border-radius:5px;"><b>💾 Local Storage:</b><br><table style="width:100%">'+lh+'</table><hr><b>💿 Session Storage:</b><br><table style="width:100%">'+sh+'</table><hr><b>🍪 Cookies:</b><br><pre style="color:#4ecdc4;">'+z(document.cookie||'(empty)')+'</pre></div>';
-document.getElementById('hclearallstorage').onclick=function(){
-if(confirm('Clear all storage?')){
-localStorage.clear();
-sessionStorage.clear();
-M.showStorage();
-}
-};
-},showInfo:function(){
-var c=document.getElementById('hcontent');
-var ua=navigator.userAgent;
-var scr=screen;
-var info='<div style="background:#0a0a0f;padding:10px;border-radius:5px;font-size:11px;">';
-info+='<b>🔧 System Info:</b><br><br>';
-info+='🌐 User Agent: <span style="color:#4ecdc4;">'+z(ua.substring(0,200))+'</span><br>';
-info+='📱 Screen: <span style="color:#4ecdc4;">'+scr.width+'x'+scr.height+'</span><br>';
-info+='👁️ Viewport: <span style="color:#4ecdc4;">'+window.innerWidth+'x'+window.innerHeight+'</span><br>';
-info+='🔍 Pixel Ratio: <span style="color:#4ecdc4;">'+window.devicePixelRatio+'</span><br>';
-info+='📄 URL: <span style="color:#4ecdc4;word-break:break-all;">'+z(location.href)+'</span><br>';
-info+='⏰ Time: <span style="color:#4ecdc4;">'+new Date().toLocaleString()+'</span><br>';
-info+='💾 Memory: <span style="color:#4ecdc4;">'+(performance.memory?Math.round(performance.memory.usedJSHeapSize/1048576)+' MB':'N/A')+'</span><br>';
-info+='📊 DOM Elements: <span style="color:#4ecdc4;">'+document.querySelectorAll('*').length+'</span><br>';
-info+='</div>';
-c.innerHTML=info;
-},destroy:function(){
-if(M.panel)M.panel.remove();
-if(M.origLog.log){
-console.log=M.origLog.log;
-console.error=M.origLog.error;
-console.warn=M.origLog.warn;
-console.info=M.origLog.info;
-}
-M.active=false;
-}
-};
-return X;
-}();
-H.init();
-window.hirako=H;
+(function(){
+    'use strict';
+    
+    // ==================== HIRAKO CORE ====================
+    var HIRAKO = {
+        version: '2.0.0',
+        active: false,
+        panel: null,
+        tools: {},
+        currentTool: null,
+        
+        // Theme colors
+        theme: {
+            bg: '#1e1e2e',
+            darkerBg: '#2a2a3a',
+            primary: '#fff',
+            accent: '#ff6b6b',
+            highlight: '#4a6bff',
+            border: '#3a3a4a',
+            success: '#4ecdc4',
+            warning: '#ffa500',
+            error: '#ff6b6b'
+        },
+        
+        // Initialize Hirako
+        init: function() {
+            if(this.active) return this;
+            
+            this.createPanel();
+            this.bindEvents();
+            this.active = true;
+            this.log('Hirako v' + this.version + ' initialized');
+            
+            return this;
+        },
+        
+        // Create main panel
+        createPanel: function() {
+            var panel = document.createElement('div');
+            panel.id = 'hirako-panel';
+            panel.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:' + this.theme.bg + ';color:' + this.theme.primary + ';z-index:999999;font-family:monospace;font-size:12px;border-top:3px solid ' + this.theme.accent + ';box-shadow:0 -2px 10px rgba(0,0,0,0.3);transition:all 0.3s ease;';
+            
+            panel.innerHTML = this.renderPanel();
+            document.body.appendChild(panel);
+            this.panel = panel;
+            this.contentEl = document.getElementById('hirako-content');
+            
+            this.initTools();
+        },
+        
+        renderPanel: function() {
+            return '<div style="display:flex;background:' + this.theme.darkerBg + ';padding:8px;border-bottom:1px solid ' + this.theme.border + ';">' +
+                '<div style="flex:1;display:flex;gap:10px;">' +
+                '<button data-tool="inspect" class="hirako-tool-btn active" style="background:' + this.theme.accent + ';color:#fff;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;">🔍 Inspect</button>' +
+                '<button data-tool="console" class="hirako-tool-btn" style="background:' + this.theme.darkerBg + ';color:' + this.theme.primary + ';border:none;padding:5px 10px;border-radius:5px;cursor:pointer;">📝 Console</button>' +
+                '<button data-tool="elements" class="hirako-tool-btn" style="background:' + this.theme.darkerBg + ';color:' + this.theme.primary + ';border:none;padding:5px 10px;border-radius:5px;cursor:pointer;">📄 DOM</button>' +
+                '<button data-tool="storage" class="hirako-tool-btn" style="background:' + this.theme.darkerBg + ';color:' + this.theme.primary + ';border:none;padding:5px 10px;border-radius:5px;cursor:pointer;">💾 Storage</button>' +
+                '<button data-tool="info" class="hirako-tool-btn" style="background:' + this.theme.darkerBg + ';color:' + this.theme.primary + ';border:none;padding:5px 10px;border-radius:5px;cursor:pointer;">ℹ️ Info</button>' +
+                '</div>' +
+                '<div><button id="hirako-close" style="background:' + this.theme.accent + ';color:#fff;border:none;padding:5px 10px;border-radius:5px;cursor:pointer;">✖ Close</button></div>' +
+                '</div>' +
+                '<div id="hirako-content" style="height:250px;overflow:auto;padding:10px;background:' + this.theme.bg + ';"></div>' +
+                '<div style="background:' + this.theme.darkerBg + ';padding:5px;font-size:10px;border-top:1px solid ' + this.theme.border + ';">' +
+                '<span>🎯 Hirako v' + this.version + '</span>' +
+                '<span style="margin-left:15px;">⚡ Tap elements to inspect</span>' +
+                '</div>';
+        },
+        
+        // Initialize all tools
+        initTools: function() {
+            this.tools = {
+                inspect: new InspectTool(this),
+                console: new ConsoleTool(this),
+                elements: new ElementsTool(this),
+                storage: new StorageTool(this),
+                info: new InfoTool(this)
+            };
+        },
+        
+        // Switch between tools
+        switchTool: function(toolName) {
+            if(this.currentTool === toolName) return;
+            
+            // Update button styles
+            var btns = this.panel.querySelectorAll('.hirako-tool-btn');
+            btns.forEach(function(btn) {
+                btn.style.background = this.theme.darkerBg;
+                btn.style.color = this.theme.primary;
+                btn.classList.remove('active');
+            }.bind(this));
+            
+            var activeBtn = this.panel.querySelector('[data-tool="' + toolName + '"]');
+            if(activeBtn) {
+                activeBtn.style.background = this.theme.accent;
+                activeBtn.style.color = '#fff';
+                activeBtn.classList.add('active');
+            }
+            
+            // Hide current tool, show new tool
+            if(this.currentTool && this.tools[this.currentTool]) {
+                this.tools[this.currentTool].hide();
+            }
+            
+            this.currentTool = toolName;
+            this.tools[toolName].show(this.contentEl);
+        },
+        
+        // Bind panel events
+        bindEvents: function() {
+            var self = this;
+            
+            this.panel.querySelectorAll('.hirako-tool-btn').forEach(function(btn) {
+                btn.onclick = function() {
+                    self.switchTool(this.dataset.tool);
+                };
+            });
+            
+            document.getElementById('hirako-close').onclick = function() {
+                self.destroy();
+            };
+        },
+        
+        // Log message
+        log: function(msg) {
+            console.log('[Hirako] ' + msg);
+        },
+        
+        // Destroy panel
+        destroy: function() {
+            if(this.panel) this.panel.remove();
+            this.active = false;
+            
+            // Cleanup tools
+            for(var key in this.tools) {
+                if(this.tools[key] && this.tools[key].destroy) {
+                    this.tools[key].destroy();
+                }
+            }
+        }
+    };
+    
+    // ==================== INSPECT TOOL ====================
+    function InspectTool(hirako) {
+        this.hirako = hirako;
+        this.pickerActive = false;
+        this.overlay = null;
+        this.tip = null;
+    }
+    
+    InspectTool.prototype.show = function(container) {
+        this.container = container;
+        this.render();
+        this.bindEvents();
+    };
+    
+    InspectTool.prototype.hide = function() {
+        this.deactivatePicker();
+    };
+    
+    InspectTool.prototype.destroy = function() {
+        this.deactivatePicker();
+    };
+    
+    InspectTool.prototype.render = function() {
+        this.container.innerHTML = 
+            '<div style="margin-bottom:10px;">' +
+            '<button id="hirako-pick-btn" style="background:#ff6b6b;color:#fff;border:none;padding:8px;border-radius:5px;margin-right:5px;cursor:pointer;">🎯 Pilih Elemen</button>' +
+            '<button id="hirako-highlight-all" style="background:#4a6bff;color:#fff;border:none;padding:8px;border-radius:5px;cursor:pointer;">✨ Highlight Semua</button>' +
+            '<button id="hirako-clear-inspect" style="background:#6b6b6b;color:#fff;border:none;padding:8px;border-radius:5px;cursor:pointer;">🗑 Clear</button>' +
+            '</div>' +
+            '<div id="hirako-inspect-result" style="background:#2a2a3a;padding:10px;border-radius:5px;font-size:11px;word-break:break-all;">' +
+            '<i>Klik "Pilih Elemen" lalu tap elemen di halaman</i>' +
+            '</div>' +
+            '<div id="hirako-css-view" style="margin-top:10px;background:#2a2a3a;padding:10px;border-radius:5px;display:none;">' +
+            '<b>🎨 CSS Styles</b><div id="hirako-css-content" style="font-size:11px;margin-top:5px;"></div>' +
+            '</div>';
+    };
+    
+    InspectTool.prototype.bindEvents = function() {
+        var self = this;
+        
+        document.getElementById('hirako-pick-btn').onclick = function() {
+            self.activatePicker();
+        };
+        
+        document.getElementById('hirako-highlight-all').onclick = function() {
+            self.highlightAll();
+        };
+        
+        document.getElementById('hirako-clear-inspect').onclick = function() {
+            document.getElementById('hirako-inspect-result').innerHTML = '<i>Siap untuk inspect elemen...</i>';
+            document.getElementById('hirako-css-view').style.display = 'none';
+        };
+    };
+    
+    InspectTool.prototype.activatePicker = function() {
+        if(this.pickerActive) return;
+        this.pickerActive = true;
+        
+        var self = this;
+        
+        this.overlay = document.createElement('div');
+        this.overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(255,107,107,0.1);z-index:1000000;cursor:crosshair;';
+        document.body.appendChild(this.overlay);
+        
+        this.tip = document.createElement('div');
+        this.tip.style.cssText = 'position:fixed;background:#ff6b6b;color:#fff;padding:5px 10px;border-radius:5px;font-size:12px;z-index:1000001;pointer-events:none;';
+        document.body.appendChild(this.tip);
+        
+        var hoverHandler = function(e) {
+            var el = e.target;
+            self.tip.innerHTML = el.tagName + (el.id ? '#' + el.id : '') + (el.className ? '.' + el.className.split(' ')[0] : '');
+            self.tip.style.left = (e.clientX + 15) + 'px';
+            self.tip.style.top = (e.clientY + 15) + 'px';
+            el.style.outline = '2px solid #ff6b6b';
+            setTimeout(function() {
+                if(el.style.outline) el.style.outline = '';
+            }, 100);
+        };
+        
+        var clickHandler = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            self.inspectElement(e.target);
+            self.deactivatePicker();
+        };
+        
+        document.addEventListener('mouseover', hoverHandler);
+        document.addEventListener('click', clickHandler);
+        
+        this.pickerHandlers = { hover: hoverHandler, click: clickHandler };
+    };
+    
+    InspectTool.prototype.deactivatePicker = function() {
+        if(!this.pickerActive) return;
+        this.pickerActive = false;
+        
+        if(this.overlay) this.overlay.remove();
+        if(this.tip) this.tip.remove();
+        
+        if(this.pickerHandlers) {
+            document.removeEventListener('mouseover', this.pickerHandlers.hover);
+            document.removeEventListener('click', this.pickerHandlers.click);
+        }
+    };
+    
+    InspectTool.prototype.inspectElement = function(el) {
+        var rect = el.getBoundingClientRect();
+        var styles = window.getComputedStyle(el);
+        
+        var info = '<b>📦 Element:</b> ' + el.tagName + '<br>';
+        info += '<b>🆔 ID:</b> ' + (el.id || '-') + '<br>';
+        info += '<b>📝 Class:</b> ' + (el.className || '-') + '<br>';
+        info += '<b>📐 Size:</b> ' + Math.round(rect.width) + 'x' + Math.round(rect.height) + 'px<br>';
+        info += '<b>📍 Position:</b> (' + Math.round(rect.left) + ', ' + Math.round(rect.top) + ')<br>';
+        info += '<b>👶 Children:</b> ' + el.children.length + '<br>';
+        info += '<b>📄 InnerHTML:</b> <span style="color:#ffa500;">' + this.escapeHtml(el.innerHTML.substring(0, 100)) + '</span><br>';
+        info += '<button id="hirako-view-css" style="background:#4a6bff;color:#fff;border:none;padding:5px;border-radius:3px;margin-top:5px;cursor:pointer;">🎨 Lihat CSS</button> ';
+        info += '<button id="hirako-edit-element" style="background:#ffa500;color:#fff;border:none;padding:5px;border-radius:3px;margin-top:5px;margin-left:5px;cursor:pointer;">✏️ Edit HTML</button>';
+        
+        document.getElementById('hirako-inspect-result').innerHTML = info;
+        
+        var self = this;
+        document.getElementById('hirako-view-css').onclick = function() {
+            var css = '';
+            for(var i = 0; i < styles.length; i++) {
+                var prop = styles[i];
+                var val = styles.getPropertyValue(prop);
+                if(val && val !== 'normal' && val !== 'auto' && val !== 'none') {
+                    css += prop + ': ' + val + ';\n';
+                }
+            }
+            document.getElementById('hirako-css-content').innerHTML = '<pre style="margin:0;color:#4ecdc4;">' + self.escapeHtml(css.substring(0, 1000)) + '</pre>';
+            document.getElementById('hirako-css-view').style.display = 'block';
+        };
+        
+        document.getElementById('hirako-edit-element').onclick = function() {
+            var newHtml = prompt('Edit HTML:', el.outerHTML);
+            if(newHtml) {
+                el.outerHTML = newHtml;
+                self.inspectElement(el);
+            }
+        };
+    };
+    
+    InspectTool.prototype.highlightAll = function() {
+        var elements = document.querySelectorAll('*');
+        var count = 0;
+        var self = this;
+        
+        elements.forEach(function(el) {
+            if(el !== self.hirako.panel && !el.id?.includes('hirako')) {
+                el.style.outline = '1px solid #ff6b6b';
+                count++;
+            }
+        });
+        
+        setTimeout(function() {
+            elements.forEach(function(el) {
+                if(el.style.outline === '1px solid #ff6b6b') el.style.outline = '';
+            });
+        }, 2000);
+        
+        this.hirako.log(count + ' elements highlighted');
+    };
+    
+    InspectTool.prototype.escapeHtml = function(str) {
+        if(!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if(m === '&') return '&amp;';
+            if(m === '<') return '&lt;';
+            if(m === '>') return '&gt;';
+            return m;
+        });
+    };
+    
+    // ==================== CONSOLE TOOL ====================
+    function ConsoleTool(hirako) {
+        this.hirako = hirako;
+        this.logs = [];
+        this.originalConsole = {};
+    }
+    
+    ConsoleTool.prototype.show = function(container) {
+        this.container = container;
+        this.render();
+        this.captureConsole();
+        this.bindEvents();
+        this.updateDisplay();
+    };
+    
+    ConsoleTool.prototype.hide = function() {
+        this.restoreConsole();
+    };
+    
+    ConsoleTool.prototype.destroy = function() {
+        this.restoreConsole();
+    };
+    
+    ConsoleTool.prototype.render = function() {
+        this.container.innerHTML = 
+            '<div style="margin-bottom:10px;">' +
+            '<button id="hirako-clear-console" style="background:#ff6b6b;color:#fff;border:none;padding:5px;border-radius:3px;cursor:pointer;">Clear Console</button>' +
+            '<button id="hirako-exec-js" style="background:#4a6bff;color:#fff;border:none;padding:5px;border-radius:3px;margin-left:5px;cursor:pointer;">Run JS</button>' +
+            '</div>' +
+            '<div id="hirako-console-output" style="background:#0a0a0f;height:180px;overflow:auto;padding:5px;font-size:10px;border-radius:5px;font-family:monospace;"></div>' +
+            '<div style="margin-top:5px;display:flex;gap:5px;">' +
+            '<input type="text" id="hirako-js-input" placeholder="JavaScript code..." style="flex:1;background:#2a2a3a;color:#fff;border:1px solid #ff6b6b;padding:5px;border-radius:3px;">' +
+            '<button id="hirako-execute-js" style="background:#4a6bff;color:#fff;border:none;padding:5px;border-radius:3px;cursor:pointer;">Execute</button>' +
+            '</div>';
+    };
+    
+    ConsoleTool.prototype.bindEvents = function() {
+        var self = this;
+        
+        document.getElementById('hirako-clear-console').onclick = function() {
+            self.logs = [];
+            self.updateDisplay();
+        };
+        
+        document.getElementById('hirako-exec-js').onclick = function() {
+            var code = document.getElementById('hirako-js-input').value;
+            if(code) self.executeJS(code);
+        };
+        
+        document.getElementById('hirako-execute-js').onclick = function() {
+            var code = document.getElementById('hirako-js-input').value;
+            if(code) self.executeJS(code);
+        };
+    };
+    
+    ConsoleTool.prototype.captureConsole = function() {
+        var self = this;
+        
+        this.originalConsole.log = console.log;
+        this.originalConsole.error = console.error;
+        this.originalConsole.warn = console.warn;
+        this.originalConsole.info = console.info;
+        
+        console.log = function() {
+            var args = Array.from(arguments);
+            self.logs.push(['📝 LOG', self.getTime(), args.join(' ')]);
+            self.originalConsole.log.apply(console, arguments);
+            self.updateDisplay();
+        };
+        
+        console.error = function() {
+            var args = Array.from(arguments);
+            self.logs.push(['❌ ERROR', self.getTime(), args.join(' ')]);
+            self.originalConsole.error.apply(console, arguments);
+            self.updateDisplay();
+        };
+        
+        console.warn = function() {
+            var args = Array.from(arguments);
+            self.logs.push(['⚠️ WARN', self.getTime(), args.join(' ')]);
+            self.originalConsole.warn.apply(console, arguments);
+            self.updateDisplay();
+        };
+        
+        console.info = function() {
+            var args = Array.from(arguments);
+            self.logs.push(['ℹ️ INFO', self.getTime(), args.join(' ')]);
+            self.originalConsole.info.apply(console, arguments);
+            self.updateDisplay();
+        };
+    };
+    
+    ConsoleTool.prototype.restoreConsole = function() {
+        if(this.originalConsole.log) {
+            console.log = this.originalConsole.log;
+            console.error = this.originalConsole.error;
+            console.warn = this.originalConsole.warn;
+            console.info = this.originalConsole.info;
+        }
+    };
+    
+    ConsoleTool.prototype.updateDisplay = function() {
+        var output = document.getElementById('hirako-console-output');
+        if(!output) return;
+        
+        var self = this;
+        output.innerHTML = this.logs.map(function(log) {
+            var color = log[0].includes('ERROR') ? '#ff6b6b' : (log[0].includes('WARN') ? '#ffa500' : (log[0].includes('INFO') ? '#4ecdc4' : '#ffffff'));
+            return '<div style="border-bottom:1px solid #2a2a3a;padding:3px;"><span style="color:' + color + ';">' + self.escapeHtml(log.join(' ')) + '</span></div>';
+        }).join('') || '<i>No logs...</i>';
+        
+        output.scrollTop = output.scrollHeight;
+    };
+    
+    ConsoleTool.prototype.executeJS = function(code) {
+        try {
+            var result = eval(code);
+            this.logs.push(['▶ EXEC', this.getTime(), code + ' → ' + JSON.stringify(result)]);
+            this.updateDisplay();
+        } catch(e) {
+            this.logs.push(['❌ ERROR', this.getTime(), e.message]);
+            this.updateDisplay();
+        }
+    };
+    
+    ConsoleTool.prototype.getTime = function() {
+        var d = new Date();
+        return d.toLocaleTimeString();
+    };
+    
+    ConsoleTool.prototype.escapeHtml = function(str) {
+        if(!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if(m === '&') return '&amp;';
+            if(m === '<') return '&lt;';
+            if(m === '>') return '&gt;';
+            return m;
+        });
+    };
+    
+    // ==================== ELEMENTS TOOL ====================
+    function ElementsTool(hirako) {
+        this.hirako = hirako;
+    }
+    
+    ElementsTool.prototype.show = function(container) {
+        this.container = container;
+        this.render();
+        this.bindEvents();
+    };
+    
+    ElementsTool.prototype.hide = function() {};
+    ElementsTool.prototype.destroy = function() {};
+    
+    ElementsTool.prototype.render = function() {
+        this.container.innerHTML = 
+            '<div style="margin-bottom:5px;">' +
+            '<button id="hirako-refresh-dom" style="background:#4a6bff;color:#fff;border:none;padding:5px;border-radius:3px;cursor:pointer;">🔄 Refresh</button>' +
+            '<span style="margin-left:10px;color:#4ecdc4;">Total elements: ' + document.querySelectorAll('*').length + '</span>' +
+            '</div>' +
+            '<div id="hirako-dom-tree" style="background:#0a0a0f;height:200px;overflow:auto;padding:5px;font-size:11px;border-radius:5px;font-family:monospace;">' +
+            this.generateDOMTree(document.body, 0) +
+            '</div>';
+    };
+    
+    ElementsTool.prototype.bindEvents = function() {
+        var self = this;
+        document.getElementById('hirako-refresh-dom').onclick = function() {
+            document.getElementById('hirako-dom-tree').innerHTML = self.generateDOMTree(document.body, 0);
+        };
+    };
+    
+    ElementsTool.prototype.generateDOMTree = function(node, level) {
+        if(node.nodeType === 1 && !node.id?.includes('hirako')) {
+            var indent = '  '.repeat(level);
+            var tag = node.tagName.toLowerCase();
+            var id = node.id ? '#' + node.id : '';
+            var cls = node.className ? '.' + node.className.toString().split(' ')[0] : '';
+            var html = indent + '<span style="color:#ff6b6b;">&lt;' + tag + id + cls + '&gt;</span>\n';
+            
+            for(var i = 0; i < node.children.length; i++) {
+                if(!node.children[i].id?.includes('hirako')) {
+                    html += this.generateDOMTree(node.children[i], level + 1);
+                }
+            }
+            
+            if(node.children.length === 0 && node.textContent.trim()) {
+                var text = node.textContent.trim().substring(0, 50);
+                if(text) html += indent + '  ' + '<span style="color:#4ecdc4;">"' + this.escapeHtml(text) + '"</span>\n';
+            }
+            
+            html += indent + '<span style="color:#ff6b6b;">&lt;/' + tag + '&gt;</span>\n';
+            return html;
+        }
+        return '';
+    };
+    
+    ElementsTool.prototype.escapeHtml = function(str) {
+        if(!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if(m === '&') return '&amp;';
+            if(m === '<') return '&lt;';
+            if(m === '>') return '&gt;';
+            return m;
+        });
+    };
+    
+    // ==================== STORAGE TOOL ====================
+    function StorageTool(hirako) {
+        this.hirako = hirako;
+    }
+    
+    StorageTool.prototype.show = function(container) {
+        this.container = container;
+        this.render();
+        this.bindEvents();
+    };
+    
+    StorageTool.prototype.hide = function() {};
+    StorageTool.prototype.destroy = function() {};
+    
+    StorageTool.prototype.render = function() {
+        var localStorageData = this.getStorageData('local');
+        var sessionStorageData = this.getStorageData('session');
+        
+        this.container.innerHTML = 
+            '<div style="margin-bottom:10px;">' +
+            '<button id="hirako-clear-all-storage" style="background:#ff6b6b;color:#fff;border:none;padding:5px;border-radius:3px;cursor:pointer;">🗑 Clear All Storage</button>' +
+            '</div>' +
+            '<div style="background:#0a0a0f;height:200px;overflow:auto;padding:5px;font-size:10px;border-radius:5px;">' +
+            '<b>💾 Local Storage:</b><br>' +
+            this.renderTable(localStorageData) +
+            '<hr>' +
+            '<b>💿 Session Storage:</b><br>' +
+            this.renderTable(sessionStorageData) +
+            '<hr>' +
+            '<b>🍪 Cookies:</b><br>' +
+            '<pre style="color:#4ecdc4;">' + this.escapeHtml(document.cookie || '(empty)') + '</pre>' +
+            '</div>';
+    };
+    
+    StorageTool.prototype.getStorageData = function(type) {
+        var storage = type === 'local' ? localStorage : sessionStorage;
+        var data = [];
+        try {
+            for(var i = 0; i < storage.length; i++) {
+                var key = storage.key(i);
+                data.push({ key: key, value: storage.getItem(key) });
+            }
+        } catch(e) {}
+        return data;
+    };
+    
+    StorageTool.prototype.renderTable = function(data) {
+        if(!data.length) return '<i>Empty</i>';
+        
+        var html = '<table style="width:100%;border-collapse:collapse;">';
+        for(var i = 0; i < data.length; i++) {
+            html += '<tr>' +
+                '<td style="color:#ffa500;padding:2px 5px;">' + this.escapeHtml(data[i].key) + '</td>' +
+                '<td style="color:#4ecdc4;padding:2px 5px;">' + this.escapeHtml(data[i].value.substring(0, 100)) + '</td>' +
+                '</tr>';
+        }
+        html += '</table>';
+        return html;
+    };
+    
+    StorageTool.prototype.bindEvents = function() {
+        var self = this;
+        document.getElementById('hirako-clear-all-storage').onclick = function() {
+            if(confirm('Clear all storage?')) {
+                localStorage.clear();
+                sessionStorage.clear();
+                self.render();
+            }
+        };
+    };
+    
+    StorageTool.prototype.escapeHtml = function(str) {
+        if(!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if(m === '&') return '&amp;';
+            if(m === '<') return '&lt;';
+            if(m === '>') return '&gt;';
+            return m;
+        });
+    };
+    
+    // ==================== INFO TOOL ====================
+    function InfoTool(hirako) {
+        this.hirako = hirako;
+    }
+    
+    InfoTool.prototype.show = function(container) {
+        this.container = container;
+        this.render();
+    };
+    
+    InfoTool.prototype.hide = function() {};
+    InfoTool.prototype.destroy = function() {};
+    
+    InfoTool.prototype.render = function() {
+        var ua = navigator.userAgent;
+        var screen = window.screen;
+        var perf = performance.memory || null;
+        
+        var info = '<div style="background:#0a0a0f;padding:10px;border-radius:5px;font-size:11px;">';
+        info += '<b>🔧 System Information:</b><br><br>';
+        info += '🌐 User Agent: <span style="color:#4ecdc4;">' + this.escapeHtml(ua.substring(0, 200)) + '</span><br>';
+        info += '📱 Screen: <span style="color:#4ecdc4;">' + screen.width + 'x' + screen.height + '</span><br>';
+        info += '👁️ Viewport: <span style="color:#4ecdc4;">' + window.innerWidth + 'x' + window.innerHeight + '</span><br>';
+        info += '🔍 Pixel Ratio: <span style="color:#4ecdc4;">' + window.devicePixelRatio + '</span><br>';
+        info += '📄 URL: <span style="color:#4ecdc4;word-break:break-all;">' + this.escapeHtml(location.href) + '</span><br>';
+        info += '⏰ Time: <span style="color:#4ecdc4;">' + new Date().toLocaleString() + '</span><br>';
+        info += '💾 Memory: <span style="color:#4ecdc4;">' + (perf ? Math.round(perf.usedJSHeapSize / 1048576) + ' MB' : 'N/A') + '</span><br>';
+        info += '📊 DOM Elements: <span style="color:#4ecdc4;">' + document.querySelectorAll('*').length + '</span><br>';
+        info += '</div>';
+        
+        this.container.innerHTML = info;
+    };
+    
+    InfoTool.prototype.escapeHtml = function(str) {
+        if(!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if(m === '&') return '&amp;';
+            if(m === '<') return '&lt;';
+            if(m === '>') return '&gt;';
+            return m;
+        });
+    };
+    
+    // ==================== START HIRAKO ====================
+    window.Hirako = HIRAKO;
+    HIRAKO.init();
+    
 })();
